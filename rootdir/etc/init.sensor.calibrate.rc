@@ -1,0 +1,20 @@
+#
+# sensor calibration
+#
+
+#synaFpTest for Emode test
+service sensor_cali_test /vendor/bin/sensor_cali_test
+    class late_start
+    user system
+    group system
+    oneshot
+    disabled
+
+on property:vendor.sensorcali.test-start=1
+    start sensor_cali_test
+
+on property:vendor.sensorcali.test-start=0
+    stop sensor_cali_test
+
+
+

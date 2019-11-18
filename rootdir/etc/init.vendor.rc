@@ -1,0 +1,129 @@
+# Copyright (C) 2012 ZTE by RUIJIAGUI
+#
+# IMPORTANT: Do not create world writable files or directories.
+# This is a common source of Android security bugs.
+#
+import /vendor/etc/init/hw/init.sensor.calibrate.rc
+
+#cpu hungry policy
+on init
+    mkdir /dev/cpuctl/cpu_hungry_app
+    mkdir /mnt/vendor/persist 0771 system root
+    chown system system /dev/cpuctl/cpu_hungry_app/tasks
+    chmod 0666 /dev/cpuctl/cpu_hungry_app/tasks
+    write /dev/cpuctl/cpu_hungry_app/cpu.shares 52
+    write /dev/cpuctl/cpu_hungry_app/cpu.rt_period_us 1000000
+    write /dev/cpuctl/cpu_hungry_app/cpu.rt_runtime_us 950000
+
+
+on boot
+    #add for charging policy
+    chown system system /sys/module/zte_misc/parameters/demo_charging_policy
+    chown system system /sys/module/zte_misc/parameters/expired_charging_policy
+
+    # add for touch self-test
+    chown system system /sys/devices/virtual/tsp_fw/touchscreen/tpd_test_cmd
+    chown system system /sys/devices/virtual/tsp_fw/touchscreen/tpd_test_filename
+    chown system system /sys/devices/virtual/tsp_fw/touchscreen/tpd_test_ini_file_path
+    chown system system /sys/devices/virtual/tsp_fw/touchscreen/tpd_test_save_file_path
+    chown system system /sys/devices/virtual/tsp_fw/touchscreen/tpd_test_save_file_name
+    chmod 0646 /sys/devices/virtual/tsp_fw/touchscreen/tpd_test_cmd
+    chmod 0646 /sys/devices/virtual/tsp_fw/touchscreen/tpd_test_filename
+    chmod 0646 /sys/devices/virtual/tsp_fw/touchscreen/tpd_test_ini_file_path
+    chmod 0646 /sys/devices/virtual/tsp_fw/touchscreen/tpd_test_save_file_path
+    chmod 0646 /sys/devices/virtual/tsp_fw/touchscreen/tpd_test_save_file_name
+
+    # add for SAR sensor pv-test
+    chown system system /sys/bus/i2c/drivers/sx932x/4-0028/status
+    chown system system /sys/bus/i2c/drivers/sx932x/4-0028/diff
+    chown system system /sys/bus/i2c/drivers/sx932x/4-0028/manual_calibrate
+    chmod 0666 /sys/bus/i2c/drivers/sx932x/4-0028/register_write
+    chmod 0444 /sys/bus/i2c/drivers/sx932x/4-0028/status
+    #add for after-sale-requirement
+
+
+    chmod 0775  /mnt/vendor/persist
+    chown root system /mnt/vendor/persist
+
+    mkdir /mnt/vendor/persist/zstats
+    chmod 0775 /mnt/vendor/persist/zstats
+    chown root system /mnt/vendor/persist/zstats
+    chown root system /mnt/vendor/persist/zstats/timezone.dat
+    chown root system /mnt/vendor/persist/zstats/avg_current.dat
+
+    chmod 0664  /dev/kmsg
+    chown root system  /dev/kmsg
+
+    chown root system /mnt/vendor/persist/zstats/capacity.dat
+    chown root system /mnt/vendor/persist/zstats/charging.dat
+    chown root system /mnt/vendor/persist/zstats/cycle.dat
+
+    chmod 0664  /mnt/vendor/persist/zstats/capacity.dat
+    chmod 0664  /mnt/vendor/persist/zstats/charging.dat
+    chmod 0664  /mnt/vendor/persist/zstats/cycle.dat
+    chmod 0664  /mnt/vendor/persist/zstats/timezone.dat
+    chmod 0664  /mnt/vendor/persist/zstats/avg_current.dat
+
+    class_start brd_normal
+
+
+on post-fs
+    restorecon_recursive /mnt/vendor/persist
+#add for light sensor cali
+    chown system system /sys/class/sprd_sensorhub/sensor_hub/raw_data3
+    chown system system /sys/class/sprd_sensorhub/sensor_hub/light_sensor_calibrator
+    chmod 666 /sys/class/sprd_sensorhub/sensor_hub/raw_data3
+    chmod 666 /sys/class/sprd_sensorhub/sensor_hub/light_sensor_calibrator
+    chown system  system  /sys/class/leds/keyboard-backlight/brightness
+    chmod 0660  /sys/class/leds/keyboard-backlight/brightness
+    chown system  system  /sys/module/gpio_keys/parameters/lock_status
+    chmod 0660  /sys/module/gpio_keys/parameters/lock_status
+
+
+
+on property:sys.demochargingpolicy.protect=1
+    write /sys/module/zte_misc/parameters/demo_charging_policy 1
+on property:sys.demochargingpolicy.protect=0
+    write /sys/module/zte_misc/parameters/demo_charging_policy 0
+
+on property:persist.sys.keeppower.anyway=1
+    setprop persist.sys.overtemp.enable 0
+    write /sys/module/zte_misc/parameters/demo_charging_policy 1
+    write /sys/module/zte_misc/parameters/policy_lowtemp_en 0
+on property:persist.sys.keeppower.anyway=0
+    setprop persist.sys.overtemp.enable 1
+    write /sys/module/zte_misc/parameters/demo_charging_policy 0
+    write /sys/module/zte_misc/parameters/policy_lowtemp_en 1
+
+on property:persist.sys.expiredchargingpolicy.protect=1
+    write /sys/module/zte_misc/parameters/expired_policy_en 1
+on property:persist.expiredchargingpolicy.protect=0
+    write /sys/module/zte_misc/parameters/expired_policy_en 0
+
+on property:ro.vendor.ramconfig=2
+    write /proc/sys/vm/extra_free_kbytes 10800
+    write /sys/kernel/mm/ksm/page_to_scan 100
+    write /sys/kernel/mm/ksm/sleep_millisecs 500
+    write /sys/kernel/mm/ksm/run 1
+    setprop persist.jankyframe.enable 0
+
+on property:ro.vendor.ramconfig=4
+    write /proc/sys/vm/extra_free_kbytes 10800
+    write /sys/kernel/mm/ksm/page_to_scan 100
+    write /sys/kernel/mm/ksm/sleep_millisecs 500
+    write /sys/kernel/mm/ksm/run 1
+    setprop persist.jankyframe.enable 0
+
+service brd_normal /vendor/bin/battery_record_daemon normal
+    class brd_normal
+    user root
+    group system root
+    oneshot
+
+    # sar sensor monitoring sim card sort
+on property:gsm.sim.operator.numeric=46001
+    write /sys/bus/i2c/drivers/sx932x/4-0028/card_type 0
+on property:gsm.sim.operator.numeric=22288
+    write /sys/bus/i2c/drivers/sx932x/4-0028/card_type 0
+on property:gsm.sim.operator.numeric=00101
+    write /sys/bus/i2c/drivers/sx932x/4-0028/card_type 1
